@@ -2,19 +2,24 @@ import string
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import pymorphy2
-import pandas as pd
-import missingno as msno
-from gensim.models import Word2Vec
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
-import numpy as np
-from keras.models import Sequential
-from keras.layers import Dense
 from sklearn.model_selection import train_test_split
-from sklearn.metrics.pairwise import cosine_similarity
-import json
 import pandas as pd
+import json
 import nltk
+import numpy as np
+nltk.download('punkt')
+nltk.download('stopwords')
+import re
+import torch.nn as nn
+import tqdm
+import torch
+import copy
+from torch.utils.data import DataLoader, TensorDataset
+import scipy.spatial.distance as ds
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from catboost import Pool, CatBoostClassifier
+
 
 def process_json(file):
     # Открываем JSON файл для чтения с указанием кодировки
@@ -59,8 +64,7 @@ df['description'] = df['description'].apply(lambda x: [word for word in x if wor
 morph = pymorphy2.MorphAnalyzer()
 df['description'] = df['description'].apply(lambda x: [morph.parse(word)[0].normal_form for word in x])
 
-from catboost import Pool, CatBoostClassifier
-import numpy as np
+
 
 # Создаем списки для хранения описания и жанров
 max_length = df['description'].str.len().max()
@@ -81,8 +85,7 @@ for index, row in df.iterrows():
 X = np.asarray(X, dtype="object")
 y = np.asarray(y, dtype="object")
 
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 y_train = [i[0] for i in y_train]
@@ -175,8 +178,6 @@ def slice(arr):
 for i in range(len(split_mod_descr)):
   slice(split_mod_descr[i])
 
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 #Токенизация данных для обучения
 
@@ -212,42 +213,6 @@ result2 = res
 X = result1
 y = result2
 X_train, X_validation, y_train, y_validation = train_test_split(X, y, random_state=43, test_size=0.2)
-
-import pandas as pd
-import json
-import requests
-import numpy as np
-import nltk
-nltk.download('punkt')
-from nltk.tokenize import word_tokenize
-import nltk
-nltk.download('stopwords')
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-import re
-from nltk.stem.snowball import SnowballStemmer
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-import matplotlib.pyplot as plt
-from numpy import array
-from sklearn.model_selection import train_test_split
-import tensorflow as tf
-import torch.optim as optim
-from sklearn.model_selection import GridSearchCV
-import math
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-from torch.autograd import Variable
-from sklearn import preprocessing
-import tqdm
-import time
-import torch
-import copy
-from torch.utils.data import DataLoader, TensorDataset
-import scipy.spatial.distance as ds
 
 #EarlyStopping
 
@@ -369,10 +334,6 @@ def convert_to_2D(arr):
       arr1[0][i] = arr[i]
   return arr1
 
-user_message = 'Комедия про новый год'
-
-import pickle
-import re
 
 def preprocess_user_message(user_message):
 
@@ -396,7 +357,6 @@ def preprocess_user_message(user_message):
 
   return normalized_words
 
-preprocess_user_message = preprocess_user_message(user_message)
 
 # функция добавления жанра в сообщение пользователя
 def add_predicted_genre(preprocess_user_message, model):
@@ -412,23 +372,6 @@ def add_predicted_genre(preprocess_user_message, model):
 
     return message_with_genre
 
-# Пример использования
-predicted_message = add_predicted_genre(preprocess_user_message, model)
-
-print(predicted_message)
-
-tokenized_user_message = tokenizer.texts_to_sequences([predicted_message])
-
-# Вывод числовой последовательности
-print(tokenized_user_message)
-
-padded_tokenized_user_message = pad_sequences(tokenized_user_message, maxlen=max_seq_length, padding='post')
-
-# Преобразование вектора tokenized_user_message в двумерный массив
-input_arr = convert_to_2D(padded_tokenized_user_message[0])
-
-# Прогнозирование с использованием модели
-out, hidden_states_user, cell_states = predict(model, torch.Tensor(convert_to_2D(padded_tokenized_user_message[0])).float())
 
 samples_df = [] #обрежем описания фильмов до размера 20
 
@@ -458,25 +401,30 @@ for i in range(len(result)):
   out, hidden_states, cell_states = predict(model, torch.Tensor(convert_to_2D(result[i])).float())
   tensors_df.append(hidden_states.numpy())
 
-from scipy.spatial.distance import cdist
-
-#Считаем косинусную близость и выводим топ5 близких к сообщению пользователя
-
-cos_dist = []
-ind = 1
-
-for i in tensors_df:
-  cos_dist.append([ds.cosine(hidden_states_user.flatten(), i.flatten()), ind])
-  ind+=1
-
-cos_dist.sort()
-top5 = cos_dist[:5]
-top5_index = [i[1] for i in top5] #индексы топ5 фильмов
-
 #добавим индексацию для получения ответов
 new_df = df.assign(index=list(range(1, 1001)))
 
-#топ5 названий
-res_name = new_df[new_df.index.isin(top5_index)]
-res_name =res_name['name'].tolist()
-print(res_name)
+def generate_movies(user_message):
+    
+    preproc_user_message = preprocess_user_message(user_message)
+
+    predicted_message = add_predicted_genre(preproc_user_message, model)
+
+    tokenized_user_message = tokenizer.texts_to_sequences([predicted_message])
+    padded_tokenized_user_message = pad_sequences(tokenized_user_message, maxlen=max_seq_length, padding='post')
+
+    input_arr = convert_to_2D(padded_tokenized_user_message[0])
+    out, hidden_states_user, cell_states = predict(model, torch.Tensor(input_arr).float())
+
+    cos_dist = []
+    ind = 1
+    for i in tensors_df:
+        cos_dist.append([ds.cosine(hidden_states_user.flatten(), i.flatten()), ind])
+        ind += 1
+    cos_dist.sort()
+    top5 = cos_dist[:5]
+    top5_index = [i[1] for i in top5]
+
+    res_name = new_df[new_df.index.isin(top5_index)]
+    res_name = res_name['name'].tolist()
+    return res_name
