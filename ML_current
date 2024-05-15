@@ -147,7 +147,7 @@ for index, row in df.iterrows():
     mod_descr.append(combined_string)
     i += 1  # Increment i for next X_array element
 
-# Создание нового списка длЗаменя хранения разделенных слов
+# Создание нового списка для хранения разделенных слов
 split_mod_descr = []
 
 # Проход по каждому элементу в mod_descr1
@@ -167,18 +167,17 @@ samples_y = []
 
 
 def slice(arr):
-    tek_len = 0
-    len_of_slice = 20
-    while (tek_len + len_of_slice < len(arr)):
-        samples_X.append(arr[tek_len:tek_len + len_of_slice - 1])
-        samples_y.append(arr[tek_len + len_of_slice - 1])
-        tek_len += 1
-
+  tek_len = 0
+  len_of_slice = 30
+  while(tek_len+len_of_slice < len(arr)):
+    samples_X.append(arr[tek_len:tek_len+len_of_slice-1])
+    samples_y.append(arr[tek_len+len_of_slice-1])
+    tek_len += 1
 
 for i in range(len(split_mod_descr)):
-    slice(split_mod_descr[i])
+  slice(split_mod_descr[i])
 
-# Токенизация данных для обучения
+#Токенизация данных для обучения
 
 sentences = samples_X + samples_y
 
@@ -196,22 +195,22 @@ print("Word index:", word_index)
 print("Encoded sequences:")
 result = (padded_sequences - padded_sequences.mean()) / padded_sequences.std()
 
-# data_for_train_test
+#data_for_train_test
 
 len_X = len(samples_X)
 
-result1 = result[:len(result) - len_X]
-result2 = result[len(result) - len_X:]
+
+result1 = result[:len(result)-len_X]
+result2 = result[len(result)-len_X :]
 res = []
 for i in result2:
-    res.append(i[0])
+  res.append(i[0])
 
 result2 = res
 
 X = result1
 y = result2
 X_train, X_validation, y_train, y_validation = train_test_split(X, y, random_state=43, test_size=0.2)
-
 # EarlyStopping
 
 
@@ -250,7 +249,7 @@ class EarlyStopping():
         return False
 
 
-# model
+#model
 
 
 class Net(nn.Module):
@@ -260,12 +259,15 @@ class Net(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers)
+        self.lstm1 = nn.LSTM(input_size, hidden_size, num_layers)
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
+
         h0 = torch.zeros(self.num_layers, self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers, self.hidden_size).to(x.device)
         out, (hn, cn) = self.lstm(x, (h0, c0))
+        out, (hn, cn) = self.lstm1(x, (hn, cn))
 
         return out, hn, cn
 
@@ -276,94 +278,93 @@ y_train = torch.Tensor(y_train).float()
 X_validation = torch.Tensor(X_validation).float().to(device)
 y_validation = torch.Tensor(y_validation).float().to(device)
 
-batch_size = 16
+batch_size = 4
 
 dataset_train = TensorDataset(X_train, y_train)
-dataloader_train = DataLoader(dataset_train, \
-                              batch_size=batch_size)
+dataloader_train = DataLoader(dataset_train,\
+  batch_size=batch_size)
 
 dataset_test = TensorDataset(X_validation, y_validation)
-dataloader_test = DataLoader(dataset_test, \
-                             batch_size=batch_size)
+dataloader_test = DataLoader(dataset_test,\
+  batch_size=batch_size)
 
 model = Net(X.shape[1], 4, 2, 1).to(device)
-model.load_state_dict(torch.load('model_lstm'))
-model.eval()
 
 loss_fn = nn.MSELoss()
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+optimizer = torch.optim.Adam(model.parameters(), lr = 0.01)
 
 es = EarlyStopping()
 
 epoch = 0
 done = False
-'''
 while epoch < 100 and not done:
-    epoch += 1
-    steps = list(enumerate(dataloader_train))
-    pbar = tqdm.tqdm(steps)
-    model.train()
-    for i, (x_batch, y_batch) in pbar:
-        y_batch_pred = model(x_batch.to(device))[0].flatten()
-        loss = loss_fn(y_batch_pred[0], y_batch.to(device))
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+  epoch += 1
+  steps = list(enumerate(dataloader_train))
+  pbar = tqdm.tqdm(steps)
+  model.train()
+  for i, (x_batch, y_batch) in pbar:
+    y_batch_pred = model(x_batch.to(device))[0].flatten()
+    loss = loss_fn(y_batch_pred[0], y_batch.to(device))
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
-        loss, current = loss.item(), (i + 1) * len(x_batch)
-        if i == len(steps) - 1:
-            model.eval()
-            pred = model(X_validation)[0].flatten()
-            vloss = loss_fn(pred[0], y_validation)
-            if es(model, vloss): done = True
-            pbar.set_description(f"Epoch: {epoch}, tloss: {loss}, vloss: {vloss:>7f}, EStop:[{es.status}]")
-        else:
-            pbar.set_description(f"Epoch: {epoch}, tloss {loss:}")
-
-'''
+    loss, current = loss.item(), (i + 1)* len(x_batch)
+    if i == len(steps)-1:
+      model.eval()
+      pred = model(X_validation)[0].flatten()
+      vloss = loss_fn(pred[0], y_validation)
+      if es(model,vloss): done = True
+      pbar.set_description(f"Epoch: {epoch}, tloss: {loss}, vloss: {vloss:>7f}, EStop:[{es.status}]")
+    else:
+      pbar.set_description(f"Epoch: {epoch}, tloss {loss:}")
 def predict(model, input):
     model.eval()
     with torch.no_grad():
         predictions = model(input)
     return predictions
 
-
 def convert_to_2D(arr):
-    arr1 = np.zeros((1, len(arr)))
-    for i in range(0, len(arr)):
-        arr1[0][i] = arr[i]
-    return arr1
+
+  arr1 = np.zeros((1, len(arr)))
+  for i in range(0, len(arr)):
+      arr1[0][i] = arr[i]
+  return arr1
 
 
 def preprocess_user_message(user_message):
-    # Преобразовать текст в строчный регистр
-    user_message = user_message.lower()  # Apply directly to the string
 
-    # Удалить пунктуацию
-    user_message = re.sub('[{}]'.format(string.punctuation), '', user_message)  # Use regular expression
+  # Преобразовать текст в строчный регистр
+  user_message = user_message.lower()  # Apply directly to the string
 
-    # Токенизировать текст
-    words = word_tokenize(user_message)
+  # Удалить пунктуацию
+  user_message = re.sub('[{}]'.format(string.punctuation), '', user_message)  # Use regular expression
 
-    # Удалить стоп-слова
-    stop_words_russian = set(stopwords.words('russian'))
-    words = [word for word in words if word not in stop_words_russian]
+  # Токенизировать текст
+  words = word_tokenize(user_message)
 
-    # Привести слова к нормальной форме
-    morph = pymorphy2.MorphAnalyzer()
-    normalized_words = [morph.parse(word)[0].normal_form for word in words]
+  # Удалить стоп-слова
+  stop_words_russian = set(stopwords.words('russian'))
+  words = [word for word in words if word not in stop_words_russian]
 
-    return normalized_words
+  # Привести слова к нормальной форме
+  morph = pymorphy2.MorphAnalyzer()
+  normalized_words = [morph.parse(word)[0].normal_form for word in words]
+
+
+  return normalized_words
 
 
 # функция добавления жанра в сообщение пользователя
+# функция добавления жанра в сообщение пользователя
 def add_predicted_genre(preprocess_user_message, model):
-    # Преобразовать сообщение пользователя в формат, который принимает модель
-    # preprocess_user_message_encoded = encoder.transform([preprocess_user_message])
+
+  # Преобразовать сообщение пользователя в формат, который принимает модель
+    #preprocess_user_message_encoded = encoder.transform([preprocess_user_message])
 
     # Предсказать жанр
-    predicted_genre_class = model1.predict(preprocess_user_message + [''] * (181 - len(preprocess_user_message)))
+    predicted_genre_class = model1.predict(preprocess_user_message+['']*(181-len(preprocess_user_message)))
     preprocess_user_message.append(predicted_genre_class[0])
     # Добавить предсказанный жанр к сообщению
     message_with_genre = preprocess_user_message
@@ -371,18 +372,16 @@ def add_predicted_genre(preprocess_user_message, model):
     return message_with_genre
 
 
-samples_df = []  # обрежем описания фильмов до размера 20
-
+samples_df = [] #обрежем описания фильмов до размера 20
 
 def slice(arr):
-    len_of_slice = 20
-    samples_df.append(arr[0:len_of_slice - 1])
-
+  len_of_slice = 30
+  samples_df.append(arr[0:len_of_slice-1])
 
 for i in range(len(split_mod_descr)):
-    slice(split_mod_descr[i])
+  slice(split_mod_descr[i])
 
-# Токенизируем сэмплы
+#Токенизируем сэмплы
 sentences = samples_df
 
 tokenizer.fit_on_texts(sentences)
@@ -393,15 +392,12 @@ max_seq_length = max(len(seq) for seq in sequences)
 padded_sequences = pad_sequences(sequences, maxlen=max_seq_length, padding='post')
 
 result = (padded_sequences - padded_sequences.mean()) / padded_sequences.std()
+tensors_df = [] #векторные представления описаний фильмов
 
-tensors_df = []  # векторные представления описаний фильмов
 
 for i in range(len(result)):
-    out, hidden_states, cell_states = predict(model, torch.Tensor(convert_to_2D(result[i])).float())
-    tensors_df.append(hidden_states.numpy())
-
-# добавим индексацию для получения ответов
-new_df = df.assign(index=list(range(1, 1001)))
+  out, hidden_states, cell_states = predict(model, torch.Tensor(convert_to_2D(result[i])).float())
+  tensors_df.append(hidden_states.numpy())
 
 
 def generate_movies(user_message):
@@ -418,13 +414,19 @@ def generate_movies(user_message):
 
     cos_dist = []
     ind = 1
+
     for i in tensors_df:
         cos_dist.append([ds.cosine(hidden_states_user.flatten(), i.flatten()), ind])
         ind += 1
+
     cos_dist.sort()
     top5 = cos_dist[:5]
-    top5_index = [i[1] for i in top5]
+    top5_index = [i[1] for i in top5]  # индексы топ5 фильмов
 
+    # добавим индексацию для получения ответов
+    new_df = df.assign(index=list(range(1, 1001)))
+
+    # топ5 названий
     res_name = new_df[new_df.index.isin(top5_index)]
     res_name = res_name['name'].tolist()
     return res_name
