@@ -372,7 +372,46 @@ def add_predicted_genre(preprocess_user_message, model):
     message_with_genre = preprocess_user_message
 
     return message_with_genre
+'''
+# Второй мод декср!!!
+'''
+mod_descr = []
+i = 0  # Initialize i before the loop
+for index, row in df.iterrows():
+    genres = row['genres']
+    name = row['name']
+    description_str = ' '.join(X_array[i])  # Join inner list into a single string
 
+    # Create a combined list with original structure
+    combined_list = []
+    combined_list.append("'" + genres + "'")  # Добавляем жанр в формате строки
+    for word in description_str.split():
+        combined_list.append("'" + word + "'")  # Добавляем каждое слово в формате строки
+
+    # Add genre and name at the end
+    combined_list.append("'" + name + "'")  # Добавляем название фильма в формате строки
+
+    # Convert the list back to a string with the original structure
+    combined_string = ', '.join(combined_list)  # Объединяем слова запятыми
+    mod_descr.append(combined_string)
+    i += 1  # Increment i for next X_array element
+
+# Создание нового списка для хранения разделенных слов
+split_mod_descr = []
+
+# Проход по каждому элементу в mod_descr1
+for element in mod_descr:
+    # Разделение строки по запятым и очистка каждого слова от кавычек и пробелов
+    split_words = [word.strip().strip("'") for word in element.split(',')]
+
+    while("" in split_words):
+      split_words.remove("")
+
+    # Добавление разделенных слов в новый список
+    if (split_words!=''):
+      split_mod_descr.append(split_words)
+
+samples_df = [] #обрежем описания фильмов до размера 20
 
 samples_df = [] #обрежем описания фильмов до размера 20
 
