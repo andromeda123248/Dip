@@ -11,5 +11,5 @@
 Архитектура LSTM:
 ![image](https://github.com/andromeda123248/Dip/assets/85245425/1d362f65-9034-4c29-99a3-3ef40613b7a2)
 
-UML-диаграмма последовательности 
+UML-диаграмма последовательности:
 ![image](https://github.com/andromeda123248/Dip/assets/85245425/33f26574-9061-4d9c-aa65-a20d1ed33a9f)
