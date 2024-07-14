@@ -23,30 +23,23 @@ from catboost import Pool, CatBoostClassifier
 
 
 def process_json(file):
-    # Открываем JSON файл для чтения с указанием кодировки
     with open(file, encoding='utf-8') as json_file:
         data = json.load(json_file)
 
-    # Преобразуем данные из JSON в DataFrame
     df = pd.DataFrame(data)
 
-    # Распаковываем столбец 'docs' в отдельные столбцы 'name', 'description' и 'genres'
     df[['name', 'description', 'genres']] = df['docs'].apply(
         lambda x: pd.Series([x['name'], x['description'], ', '.join([genre['name'] for genre in x['genres']])]))
 
-    # Удаляем столбец 'docs', так как мы уже распаковали его содержимое
     df = df.drop(columns=['docs'])
 
-    # Сохраняем данные в CSV файл
     df.to_csv('data.csv', index=False)
 
     return df
 
 
-# Получаем путь к файлу examples.json
 file_path = 'examples.json'
 
-# Пример использования функции
 df = process_json(file_path)
 
 # Предобработка датафрейма
@@ -54,28 +47,23 @@ df['description'] = df['description'].str.lower()
 
 df['description'] = df['description'].str.replace('[{}]'.format(string.punctuation), '')
 
-# Токенизация
 df['description'] = df['description'].apply(word_tokenize)
 
-# Удаление стоп слов
 stop_words_russian = set(stopwords.words('russian'))
 df['description'] = df['description'].apply(lambda x: [word for word in x if word not in stop_words_russian])
 
-# Приведение слов к их изначальной форме
 morph = pymorphy2.MorphAnalyzer()
 df['description'] = df['description'].apply(lambda x: [morph.parse(word)[0].normal_form for word in x])
 
-# Создаем списки для хранения описания и жанров
+#списки для хранения описания и жанров
 max_length = df['description'].str.len().max()
 X = []
 y = []
 
-# Проходим по каждому фильму в датафрейме
 for index, row in df.iterrows():
     description = row['description']
     genre = row['genres'].lower().replace(' ', '').split(',')
 
-    # Добавляем нули в конец описания для уравнивания длины
     description_padded = description + [''] * (max_length - len(description))
 
     X.append(description_padded)
@@ -127,38 +115,31 @@ X_array = X.tolist()
 X_array = [[item for item in sublist if item != ''] for sublist in X_array]
 
 mod_descr = []
-i = 0  # Initialize i before the loop
+i = 0 
 for index, row in df.iterrows():
     genres = row['genres']
     name = row['name']
-    description_str = ' '.join(X_array[i])  # Join inner list into a single string
+    description_str = ' '.join(X_array[i])  
 
-    # Create a combined list with original structure
     combined_list = []
-    combined_list.append("'" + genres + "'")  # Добавляем жанр в формате строки
+    combined_list.append("'" + genres + "'") 
     for word in description_str.split():
-        combined_list.append("'" + word + "'")  # Добавляем каждое слово в формате строки
+        combined_list.append("'" + word + "'") 
 
-    # Add genre and name at the end
-    combined_list.append("'" + name + "'")  # Добавляем название фильма в формате строки
+    combined_list.append("'" + name + "'")
 
-    # Convert the list back to a string with the original structure
-    combined_string = ', '.join(combined_list)  # Объединяем слова запятыми
+    combined_string = ', '.join(combined_list)
     mod_descr.append(combined_string)
-    i += 1  # Increment i for next X_array element
+    i += 1 
 
-# Создание нового списка для хранения разделенных слов
 split_mod_descr = []
 
-# Проход по каждому элементу в mod_descr1
 for element in mod_descr:
-    # Разделение строки по запятым и очистка каждого слова от кавычек и пробелов
     split_words = [word.strip().strip("'") for word in element.split(',')]
 
     while("" in split_words):
       split_words.remove("")
 
-    # Добавление разделенных слов в новый список
     if (split_words!=''):
       split_mod_descr.append(split_words)
 
@@ -195,10 +176,7 @@ print("Word index:", word_index)
 print("Encoded sequences:")
 result = (padded_sequences - padded_sequences.mean()) / padded_sequences.std()
 
-#data_for_train_test
-
 len_X = len(samples_X)
-
 
 result1 = result[:len(result)-len_X]
 result2 = result[len(result)-len_X :]
@@ -211,9 +189,8 @@ result2 = res
 X = result1
 y = result2
 X_train, X_validation, y_train, y_validation = train_test_split(X, y, random_state=43, test_size=0.2)
+
 # EarlyStopping
-
-
 device = 'cpu'
 print(f"Using device: {device}")
 
@@ -249,9 +226,7 @@ class EarlyStopping():
         return False
 
 
-#model
-
-
+#lstm_model
 class Net(nn.Module):
 
     def __init__(self, input_size, hidden_size, num_layers, output_size):
@@ -335,20 +310,16 @@ def convert_to_2D(arr):
 
 def preprocess_user_message(user_message):
 
-  # Преобразовать текст в строчный регистр
-  user_message = user_message.lower()  # Apply directly to the string
 
-  # Удалить пунктуацию
-  user_message = re.sub('[{}]'.format(string.punctuation), '', user_message)  # Use regular expression
+  user_message = user_message.lower()
 
-  # Токенизировать текст
+  user_message = re.sub('[{}]'.format(string.punctuation), '', user_message) 
+
   words = word_tokenize(user_message)
 
-  # Удалить стоп-слова
   stop_words_russian = set(stopwords.words('russian'))
   words = [word for word in words if word not in stop_words_russian]
 
-  # Привести слова к нормальной форме
   morph = pymorphy2.MorphAnalyzer()
   normalized_words = [morph.parse(word)[0].normal_form for word in words]
 
@@ -357,22 +328,17 @@ def preprocess_user_message(user_message):
 
 
 # функция добавления жанра в сообщение пользователя
-# функция добавления жанра в сообщение пользователя
 def add_predicted_genre(preprocess_user_message, model):
 
-  # Преобразовать сообщение пользователя в формат, который принимает модель
-    #preprocess_user_message_encoded = encoder.transform([preprocess_user_message])
-
-    # Предсказать жанр
     predicted_genre_class = model1.predict(preprocess_user_message+['']*(181-len(preprocess_user_message)))
     preprocess_user_message.append(predicted_genre_class[0])
-    # Добавить предсказанный жанр к сообщению
+
     message_with_genre = preprocess_user_message
 
     return message_with_genre
 
 
-samples_df = [] #обрежем описания фильмов до размера 20
+samples_df = []
 
 def slice(arr):
   len_of_slice = 30
@@ -381,7 +347,6 @@ def slice(arr):
 for i in range(len(split_mod_descr)):
   slice(split_mod_descr[i])
 
-#Токенизируем сэмплы
 sentences = samples_df
 
 tokenizer.fit_on_texts(sentences)
@@ -392,7 +357,7 @@ max_seq_length = max(len(seq) for seq in sequences)
 padded_sequences = pad_sequences(sequences, maxlen=max_seq_length, padding='post')
 
 result = (padded_sequences - padded_sequences.mean()) / padded_sequences.std()
-tensors_df = [] #векторные представления описаний фильмов
+tensors_df = [] 
 
 
 for i in range(len(result)):
