@@ -21,7 +21,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from catboost import Pool, CatBoostClassifier
 
-
+# Преобразование JSON в DataFrame
 def process_json(file):
     with open(file, encoding='utf-8') as json_file:
         data = json.load(json_file)
@@ -55,7 +55,7 @@ df['description'] = df['description'].apply(lambda x: [word for word in x if wor
 morph = pymorphy2.MorphAnalyzer()
 df['description'] = df['description'].apply(lambda x: [morph.parse(word)[0].normal_form for word in x])
 
-#списки для хранения описания и жанров
+# Cписки для хранения описания и жанров
 max_length = df['description'].str.len().max()
 X = []
 y = []
@@ -76,7 +76,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 y_train = [i[0] for i in y_train]
 
-# загрузка catboost
+# Загрузка catboost
 model1 = CatBoostClassifier()
 model1 = CatBoostClassifier().load_model("catboost_model")
 
@@ -99,17 +99,17 @@ preds_proba = model1.predict_proba(eval_dataset)
 preds_raw = model1.predict(eval_dataset,
                            prediction_type='RawFormulaVal')
 
-# предсказание жанров
+# Предсказание жанров
 predicted_genres = model1.predict(X)
 
 acc = 0
-
+# Вычисление accuracy
 for i in range(len(preds_class)):
     if (preds_class[i][0] in set(y_test[i])):
         acc += 1
 
 print(acc / len(y_test))
-
+# Подготовка данных для обработки
 X_array = X.tolist()
 
 X_array = [[item for item in sublist if item != ''] for sublist in X_array]
@@ -146,7 +146,7 @@ for element in mod_descr:
 samples_X = []
 samples_y = []
 
-
+# Разбиение split_mod_descr на сегменты длиной 30 слов 
 def slice(arr):
   tek_len = 0
   len_of_slice = 30
@@ -158,7 +158,7 @@ def slice(arr):
 for i in range(len(split_mod_descr)):
   slice(split_mod_descr[i])
 
-#Токенизация данных для обучения
+# Токенизация данных для обучения
 
 sentences = samples_X + samples_y
 
@@ -175,7 +175,7 @@ print("Word index:", word_index)
 
 print("Encoded sequences:")
 result = (padded_sequences - padded_sequences.mean()) / padded_sequences.std()
-
+# Подготовка данных для обучения
 len_X = len(samples_X)
 
 result1 = result[:len(result)-len_X]
@@ -226,7 +226,7 @@ class EarlyStopping():
         return False
 
 
-#lstm_model
+# LSTM_model
 class Net(nn.Module):
 
     def __init__(self, input_size, hidden_size, num_layers, output_size):
@@ -294,12 +294,13 @@ while epoch < 100 and not done:
       pbar.set_description(f"Epoch: {epoch}, tloss: {loss}, vloss: {vloss:>7f}, EStop:[{es.status}]")
     else:
       pbar.set_description(f"Epoch: {epoch}, tloss {loss:}")
+# Получение прогнозов
 def predict(model, input):
     model.eval()
     with torch.no_grad():
         predictions = model(input)
     return predictions
-
+# Преобразует одномерный массив в двумерный массив размерности 1xN
 def convert_to_2D(arr):
 
   arr1 = np.zeros((1, len(arr)))
@@ -307,9 +308,8 @@ def convert_to_2D(arr):
       arr1[0][i] = arr[i]
   return arr1
 
-
+# Предобработка сообщения пользователя
 def preprocess_user_message(user_message):
-
 
   user_message = user_message.lower()
 
@@ -339,14 +339,14 @@ def add_predicted_genre(preprocess_user_message, model):
 
 
 samples_df = []
-
+# Создание среза
 def slice(arr):
   len_of_slice = 30
   samples_df.append(arr[0:len_of_slice-1])
 
 for i in range(len(split_mod_descr)):
   slice(split_mod_descr[i])
-
+# Преобразование текстовых данных в числовые последовательности
 sentences = samples_df
 
 tokenizer.fit_on_texts(sentences)
@@ -359,12 +359,12 @@ padded_sequences = pad_sequences(sequences, maxlen=max_seq_length, padding='post
 result = (padded_sequences - padded_sequences.mean()) / padded_sequences.std()
 tensors_df = [] 
 
-
+# Извлечения скрытых состояний 
 for i in range(len(result)):
   out, hidden_states, cell_states = predict(model, torch.Tensor(convert_to_2D(result[i])).float())
   tensors_df.append(hidden_states.numpy())
 
-
+# Генерация рекомендательного списка
 def generate_movies(user_message):
     preproc_user_message = preprocess_user_message(user_message)
 
@@ -388,10 +388,10 @@ def generate_movies(user_message):
     top5 = cos_dist[:5]
     top5_index = [i[1] for i in top5]  # индексы топ5 фильмов
 
-    # добавим индексацию для получения ответов
+    # Добавим индексацию для получения ответов
     new_df = df.assign(index=list(range(1, 1001)))
 
-    # топ5 названий
+    # Топ5 названий
     res_name = new_df[new_df.index.isin(top5_index)]
     res_name = res_name['name'].tolist()
     return res_name
